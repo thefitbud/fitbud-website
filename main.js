@@ -103,19 +103,91 @@
     share.href += encodeURIComponent(location.origin + location.pathname);
   }
 
+  // Walkthrough: tabs on wide screens; on narrow screens every panel shows in a swipeable row.
+  var walk = document.querySelector("[data-walk]");
+  if (walk) {
+    var tabs = Array.prototype.slice.call(walk.querySelectorAll("[role=tab]"));
+    var panels = Array.prototype.slice.call(walk.querySelectorAll("[role=tabpanel]"));
+    var select = function (idx, focus) {
+      tabs.forEach(function (t, i) {
+        var on = i === idx;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        panels[i].hidden = !on;
+      });
+      if (focus) tabs[idx].focus();
+    };
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () { select(i, false); });
+      t.addEventListener("keydown", function (e) {
+        var d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        select((i + d + tabs.length) % tabs.length, true);
+      });
+    });
+    select(0, false);
+  }
+
+  // Mobile sticky CTA: shows once the hero CTA is out of view, hides at the signup form.
+  var sticky = document.getElementById("stickycta");
+  var heroCta = document.querySelector(".hero .cta-row");
+  var signupSection = document.getElementById("early-access");
+  if (sticky && heroCta && signupSection && "IntersectionObserver" in window) {
+    var heroVisible = true, signupVisible = false;
+    var sync = function () {
+      var on = !heroVisible && !signupVisible;
+      sticky.classList.toggle("is-on", on);
+      sticky.setAttribute("aria-hidden", on ? "false" : "true");
+      sticky.querySelector("a").tabIndex = on ? 0 : -1;
+    };
+    new IntersectionObserver(function (es) { heroVisible = es[0].isIntersecting || es[0].boundingClientRect.top > 0; sync(); }).observe(heroCta);
+    new IntersectionObserver(function (es) { signupVisible = es[0].isIntersecting; sync(); }).observe(signupSection);
+  }
+
+  // Early-access form. Posts to data-endpoint when one is configured.
+  var form = document.getElementById("signup");
+  if (form) {
+    var msg = document.getElementById("signup-msg");
+    var say = function (text, isError) { msg.textContent = text; msg.classList.toggle("is-error", !!isError); };
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = form.elements.name, contact = form.elements.contact;
+      var bad = null;
+      [name, contact].forEach(function (f) {
+        var empty = !f.value.trim();
+        f.setAttribute("aria-invalid", empty ? "true" : "false");
+        if (empty && !bad) bad = f;
+      });
+      if (bad) { say("Please add your name and an email or WhatsApp number.", true); bad.focus(); return; }
+      var endpoint = form.getAttribute("data-endpoint");
+      if (!endpoint) { say("Sign-ups aren't connected yet. Please check back soon.", true); return; }
+      var btn = form.querySelector("button[type=submit]");
+      btn.disabled = true;
+      fetch(endpoint, { method: "POST", body: new FormData(form), headers: { Accept: "application/json" } })
+        .then(function (r) {
+          if (!r.ok) throw new Error("bad status");
+          form.reset();
+          say("You're on the list. We'll be in touch as we open FitBud to more trainers.");
+        })
+        .catch(function () { say("That didn't go through. Please try again in a moment.", true); })
+        .then(function () { btn.disabled = false; });
+    });
+  }
+
   // Reveal sections as they enter the viewport.
   var targets = document.querySelectorAll(
-    ".section__head, .tool, .punch, .split > *, .why, .chase, .reframe, .quote, .flow li, .browser, .closing__title"
+    ".section__head, .tools, .punch, .ownapp, .helps, .split > *, .why, .answers, .quote, .walk, .note, .closing__grid > *"
   );
   if (!("IntersectionObserver" in window) || reduced) return;
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (en) {
       if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); }
     });
-  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
   targets.forEach(function (t, i) {
     t.classList.add("reveal");
-    t.style.transitionDelay = (i % 6) * 50 + "ms";
+    t.style.transitionDelay = (i % 4) * 50 + "ms";
     io.observe(t);
   });
 })();
