@@ -24,7 +24,7 @@ The landing page form posts to a small Google Apps Script (`Code.gs`) that adds 
    - Who has access: **Anyone** (the public form has to reach it; it only accepts sign-ups and never returns sheet data)
 
    Press **Deploy** and copy the **Web app URL** (`https://script.google.com/macros/s/…/exec`).
-5. **Connect the page.** In `apps/landing/index.html`, paste that URL into the form's `data-endpoint=""`.
+5. **Connect the page.** In `apps/landing/public/index.html`, paste that URL into the form's `data-endpoint` (already done for the current web app).
 6. **Check it.** Open the web app URL in a browser: it should show `{"ok":true,…}`. Then submit the form on the live page once with your own details and confirm the row appears. Delete the test row afterwards.
 
 **Changing the script later:** use **Deploy › Manage deployments › edit (pencil) › Version: New version › Deploy**. That keeps the same URL. "New deployment" would create a new URL, and you'd have to update the page.

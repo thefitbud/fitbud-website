@@ -9,7 +9,7 @@ import { startMock } from './mock-server.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const ROOT = new URL('../../', import.meta.url).pathname;
+const ROOT = new URL('../../public/', import.meta.url).pathname;
 const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' };
 const SHOTS = process.env.SHOTS_DIR;
 
