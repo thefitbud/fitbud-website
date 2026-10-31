@@ -1,4 +1,4 @@
-// node --test apps/landing/sheets/test/code.test.mjs
+// node --test sheets/test/code.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadScript } from './harness.mjs';

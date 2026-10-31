@@ -1,5 +1,5 @@
 // End-to-end: the real landing page posting to the mock web app (needs Playwright + Chromium).
-//   node apps/landing/sheets/test/e2e.mjs
+//   node sheets/test/e2e.mjs
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';

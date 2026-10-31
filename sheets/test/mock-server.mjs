@@ -1,7 +1,7 @@
 // Local stand-in for the deployed Apps Script web app, for testing the landing form.
 // POST /exec runs Code.gs's doPost, then answers like Google does: a 302 to an /echo URL
 // that returns the JSON. Both carry Access-Control-Allow-Origin: *, as Google's do.
-//   node apps/landing/sheets/test/mock-server.mjs [port]   (rows: GET /rows.csv)
+//   node sheets/test/mock-server.mjs [port]   (rows: GET /rows.csv)
 import http from 'node:http';
 import { loadScript } from './harness.mjs';
 

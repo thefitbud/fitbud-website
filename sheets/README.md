@@ -24,7 +24,7 @@ The landing page form posts to a small Google Apps Script (`Code.gs`) that adds 
    - Who has access: **Anyone** (the public form has to reach it; it only accepts sign-ups and never returns sheet data)
 
    Press **Deploy** and copy the **Web app URL** (`https://script.google.com/macros/s/…/exec`).
-5. **Connect the page.** In `apps/landing/public/index.html`, paste that URL into the form's `data-endpoint` (already done for the current web app).
+5. **Connect the page.** In `public/index.html`, paste that URL into the form's `data-endpoint` (already done for the current web app).
 6. **Check it.** Open the web app URL in a browser: it should show `{"ok":true,…}`. Then submit the form on the live page once with your own details and confirm the row appears. Delete the test row afterwards.
 
 **Changing the script later:** use **Deploy › Manage deployments › edit (pencil) › Version: New version › Deploy**. That keeps the same URL. "New deployment" would create a new URL, and you'd have to update the page.
@@ -38,8 +38,8 @@ The landing page form posts to a small Google Apps Script (`Code.gs`) that adds 
 ## Tests
 
 ```bash
-node --test apps/landing/sheets/test/code.test.mjs   # Code.gs logic against an in-memory sheet
-node apps/landing/sheets/test/e2e.mjs                # real page in Chromium → stand-in web app (needs Playwright)
+npm test          # Code.gs logic against an in-memory sheet (no install needed)
+npm run test:e2e  # real page in Chromium → stand-in web app (needs Playwright, see README)
 ```
 
-`test/mock-server.mjs` runs `Code.gs` behind a local URL that copies Google's redirect and CORS behaviour. Run it with `node apps/landing/sheets/test/mock-server.mjs` to try the form locally: put `http://localhost:4400/exec` in `data-endpoint` and see the rows at `http://localhost:4400/rows.csv`.
+`test/mock-server.mjs` runs `Code.gs` behind a local URL that copies Google's redirect and CORS behaviour. Run it with `node sheets/test/mock-server.mjs` to try the form locally: put `http://localhost:4400/exec` in `data-endpoint` and see the rows at `http://localhost:4400/rows.csv`.

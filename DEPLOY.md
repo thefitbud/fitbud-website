@@ -1,26 +1,26 @@
 # Putting the landing page on thefitbud.com
 
-**Plan:** host the page on **Cloudflare Pages**, connected to the GitHub repo, and keep DNS at **Hostinger**.
+**Plan:** host the page on **Cloudflare Pages**, connected to this GitHub repo (`thefitbud/fitbud-website`), and keep DNS at **Hostinger**.
 `www.thefitbud.com` serves the page, and `thefitbud.com` redirects to it.
 
 Why this way:
 - **Email keeps working.** `tech@thefitbud.com` is the app's support and system address. This plan only touches the `www` record and the bare-domain redirect, never mail records or nameservers.
-- **Every merge to `main` that changes the page redeploys it.** No uploads by hand.
+- **Every push to `main` redeploys it.** No uploads by hand, and pull requests get their own preview links.
 - **It's free** and on the Cloudflare account FitBud already uses.
 
-Only the `apps/landing/public/` folder is published. `_headers` there sets the security headers, including a content policy that only lets the form talk to Google Apps Script.
+Only the `public/` folder is published. `_headers` there sets the security headers, including a content policy that only lets the form talk to Google Apps Script.
 
 > These steps are for whoever holds the Cloudflare and Hostinger logins (Firoz). Hostinger's menu names change now and then. If a label differs, look for the closest match.
 
 ## 0. Before you start
 
-- [ ] The landing page is merged to `main`.
+- [ ] `main` has the version you want live.
 - [ ] In Hostinger, open **Domains › thefitbud.com › DNS / Nameservers** and **screenshot the current records**. This is your undo.
 - [ ] Note whether `thefitbud.com` shows a website today (a Hostinger site, a parking page or nothing). The redirect in step 4 replaces whatever is there.
 
 ## 1. Create the Pages project (Cloudflare)
 
-**Workers & Pages › Create › Pages › Connect to Git**, then choose `thefitbud/thefitbud`.
+**Workers & Pages › Create › Pages › Connect to Git**, then choose `thefitbud/fitbud-website`.
 
 | Setting | Value |
 |---|---|
@@ -28,15 +28,12 @@ Only the `apps/landing/public/` folder is published. `_headers` there sets the s
 | Production branch | `main` |
 | Framework preset | None |
 | Build command | *(leave empty)* |
-| Build output directory | `apps/landing/public` |
+| Build output directory | `public` |
 | Root directory | *(leave empty)* |
-| Environment variable | `SKIP_DEPENDENCY_INSTALL` = `1` (the page needs no install, so this skips the monorepo's) |
-
-After the first deploy, open **Settings › Builds › Build watch paths** and set **Include** to `apps/landing/public/*`. Then app and API changes don't redeploy the landing page.
 
 Check `https://fitbud-landing.pages.dev`. The page should load, and the sign-up form should work (try it once and delete the row).
 
-*Without Git:* `wrangler pages deploy apps/landing/public --project-name fitbud-landing` uploads the folder directly. Repeat it after every change.
+*Without Git:* `wrangler pages deploy public --project-name fitbud-landing` uploads the folder directly. Repeat it after every change.
 
 ## 2. Add the domain to the project (Cloudflare)
 
@@ -82,5 +79,5 @@ Then check that both `http://thefitbud.com` and `https://thefitbud.com` land on 
 
 ## Changing the page later
 
-Edit files in `apps/landing/public/` and merge to `main`. Pages redeploys in about a minute.
-The sign-up endpoint is the form's `data-endpoint` in `index.html`. The sheet script and its tests are in `apps/landing/sheets/`.
+Edit files in `public/` and merge to `main`. Pages redeploys in about a minute.
+The sign-up endpoint is the form's `data-endpoint` in `public/index.html`. The sheet script and its tests are in `sheets/`.
