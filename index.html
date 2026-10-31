@@ -313,22 +313,36 @@
           <p class="lede lede--light">FitBud is still being built. Join the early-access list and we'll reach out as we open it to more trainers.</p>
         </div>
 
-        <!-- Set data-endpoint to the list's form endpoint (it must accept a form POST). -->
+        <!-- data-endpoint: the Google Apps Script web app URL (see sheets/README.md). -->
         <form class="signup" id="signup" data-endpoint="" novalidate>
           <h3>Join the early-access list</h3>
           <label for="f-name">Your name</label>
-          <input id="f-name" name="name" autocomplete="name" required />
+          <input id="f-name" name="name" autocomplete="name" maxlength="80" required aria-describedby="f-name-err" />
+          <p class="field-err" id="f-name-err"></p>
           <label for="f-contact">Email or WhatsApp number</label>
-          <input id="f-contact" name="contact" autocomplete="email" required />
-          <fieldset>
+          <input id="f-contact" name="contact" autocomplete="email" inputmode="email" maxlength="120" required aria-describedby="f-contact-err" />
+          <p class="field-err" id="f-contact-err"></p>
+          <fieldset aria-describedby="f-mode-err">
+            <legend>How do you coach?</legend>
+            <div class="chips">
+              <label><input type="radio" name="mode" value="Online" required /><span>Online</span></label>
+              <label><input type="radio" name="mode" value="Hybrid" /><span>Hybrid</span></label>
+              <label><input type="radio" name="mode" value="In person" /><span>In person</span></label>
+            </div>
+            <p class="field-err" id="f-mode-err"></p>
+          </fieldset>
+          <fieldset aria-describedby="f-clients-err">
             <legend>How many clients do you coach?</legend>
             <div class="chips">
-              <label><input type="radio" name="clients" value="Under 5" /><span>Under 5</span></label>
+              <label><input type="radio" name="clients" value="Under 5" required /><span>Under 5</span></label>
               <label><input type="radio" name="clients" value="5 to 10" /><span>5 to 10</span></label>
               <label><input type="radio" name="clients" value="10 to 20" /><span>10 to 20</span></label>
               <label><input type="radio" name="clients" value="20+" /><span>20+</span></label>
             </div>
+            <p class="field-err" id="f-clients-err"></p>
           </fieldset>
+          <!-- Spam trap: people never see or fill this. -->
+          <div class="hp" aria-hidden="true"><label for="f-website">Website</label><input id="f-website" name="website" tabindex="-1" autocomplete="off" /></div>
           <button class="btn btn--primary btn--block" type="submit">Join the early-access list</button>
           <p class="signup__msg" id="signup-msg" role="status" aria-live="polite"></p>
           <p class="signup__small">We'll only use this to contact you about FitBud early access.</p>

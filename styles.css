@@ -285,6 +285,12 @@ a { color: var(--indigo); }
 .signup__msg { margin: 4px 0 0; font-weight: 600; color: var(--navy); min-height: 0; }
 .signup__msg:empty { display: none; }
 .signup__msg.is-error { color: #B91C1C; }
+.field-err { margin: -4px 0 6px; font-size: 14px; font-weight: 500; color: #B91C1C; }
+.field-err:empty { display: none; }
+.signup fieldset .field-err { margin: 8px 0 0; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.signup { position: relative; }
+.signup__msg.is-ok { background: var(--pos-bg); border: 1px solid #BFEBD8; color: var(--pos); padding: 12px 14px; border-radius: 10px; }
 .signup__small { margin: 0; font-size: 13px; color: var(--ink-500); }
 
 /* Sticky CTA (mobile) */
