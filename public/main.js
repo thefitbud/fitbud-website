@@ -139,7 +139,7 @@
       var on = !heroVisible && !signupVisible;
       sticky.classList.toggle("is-on", on);
       sticky.setAttribute("aria-hidden", on ? "false" : "true");
-      sticky.querySelector("a").tabIndex = on ? 0 : -1;
+      sticky.querySelectorAll("a").forEach(function (a) { a.tabIndex = on ? 0 : -1; });
     };
     new IntersectionObserver(function (es) { heroVisible = es[0].isIntersecting || es[0].boundingClientRect.top > 0; sync(); }).observe(heroCta);
     new IntersectionObserver(function (es) { signupVisible = es[0].isIntersecting; sync(); }).observe(signupSection);
