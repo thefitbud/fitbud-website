@@ -8,6 +8,7 @@ import { createD1 } from './d1.mjs';
 const ORIGIN = 'https://www.thefitbud.com';
 const BARE = 'https://thefitbud.com';
 const realFetch = globalThis.fetch;
+let sheetFails = false;
 
 function setup({ loops = () => new Response('{"success":true}'), env: extra = {} } = {}) {
   const DB = createD1();
@@ -15,10 +16,11 @@ function setup({ loops = () => new Response('{"success":true}'), env: extra = {}
   globalThis.fetch = async (url, init) => {
     calls.push({ url: String(url), init });
     if (String(url).includes('loops.so')) return loops(calls.filter((c) => c.url.includes('loops.so')).length, init);
+    if (String(url).includes('script.google.com')) return sheetFails ? new Response('', { status: 500 }) : new Response('{"ok":true}');
     throw new Error(`unexpected fetch ${url}`);
   };
   const env = { DB, ALLOWED_ORIGINS: `${ORIGIN},${BARE},https://fitbud-landing.pages.dev`, LOOPS_API_KEY: 'test-key',
-    LOOPS_EVENT_NAME: 'early_access_signup', ...extra };
+    LOOPS_EVENT_NAME: 'early_access_signup', SHEET_ENDPOINT: 'https://script.google.com/macros/s/x/exec', ...extra };
   const waits = [];
   const ctx = { waitUntil: (p) => waits.push(p) };
   const post = async (fields, origin = ORIGIN) => {
@@ -28,10 +30,11 @@ function setup({ loops = () => new Response('{"success":true}'), env: extra = {}
     await Promise.all(waits.splice(0)); // the background send to Loops
     return { status: res.status, body: await res.json(), headers: res.headers };
   };
+  const sheetCalls = () => calls.filter((c) => c.url.includes('script.google.com'));
   const rows = () => DB.raw.prepare('SELECT * FROM signups ORDER BY id').all();
-  return { env, ctx, post, rows, calls, loopsCalls: () => calls.filter((c) => c.url.includes('loops.so')) };
+  return { env, ctx, post, rows, calls, sheetCalls, loopsCalls: () => calls.filter((c) => c.url.includes('loops.so')) };
 }
-test.afterEach(() => { globalThis.fetch = realFetch; });
+test.afterEach(() => { globalThis.fetch = realFetch; sheetFails = false; });
 
 const asha = { name: 'Asha Rao', contact: 'Asha@Example.com', mode: 'Hybrid', clients: '10 to 20', page: 'https://www.thefitbud.com/' };
 
@@ -211,4 +214,35 @@ test('phone sign-ups are not sent straight away either', async () => {
   const t = setup();
   await t.post({ ...asha, contact: '+91 98765 43210' });
   assert.equal(t.loopsCalls().length, 0);
+});
+
+test('every sign-up is also sent to the sheet, with the form fields as posted', async () => {
+  const t = setup();
+  await t.post({ ...asha, contact: '+91 98765 43210' });
+  await t.post(asha);
+  await t.post(asha); // a repeat: the sheet script de-duplicates it itself
+  assert.equal(t.sheetCalls().length, 3);
+  const sent = new URLSearchParams(t.sheetCalls()[1].init.body);
+  assert.equal(sent.get('name'), 'Asha Rao');
+  assert.equal(sent.get('contact'), 'Asha@Example.com');
+  assert.equal(sent.get('mode'), 'Hybrid');
+  assert.equal(sent.get('clients'), '10 to 20');
+});
+
+test('nothing goes to the sheet for rejected input or the spam trap', async () => {
+  const t = setup();
+  await t.post({ ...asha, name: '' });
+  await t.post({ ...asha, website: 'http://spam' });
+  assert.equal(t.sheetCalls().length, 0);
+});
+
+test('a sheet failure never loses the sign-up or the Loops send', async () => {
+  sheetFails = true;
+  const t = setup();
+  const r = await t.post(asha);
+  assert.deepEqual(r.body, { ok: true });
+  assert.equal(t.rows()[0].loops_status, 'synced');
+  t.env.SHEET_ENDPOINT = '';
+  await t.post({ ...asha, contact: 'b@example.com' });
+  assert.equal(t.sheetCalls().length, 1, 'empty SHEET_ENDPOINT switches the copy off');
 });

@@ -36,5 +36,8 @@ enabled = true
 ALLOWED_ORIGINS = "https://www.thefitbud.com,https://thefitbud.com,https://fitbud-landing.pages.dev,https://fitbud-website.restless-unit-1f42.workers.dev"
 # The event Loops listens for to start the follow-up loop.
 LOOPS_EVENT_NAME = "early_access_signup"
+# Every new sign-up is also sent to this Google Apps Script (sheets/Code.gs), so the team can keep
+# working from the sheet. Empty to stop.
+SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbxerTZpJu2BpHX-z1IkIpWQk_w0RXLTGYmZ9yBTVbGv5OzdgOdn084ds8NeW2qDGM6HuQ/exec"
 
 # Secret, set with: npx wrangler secret put LOOPS_API_KEY

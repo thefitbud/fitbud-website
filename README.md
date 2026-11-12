@@ -7,8 +7,8 @@ No framework, no build step, no dependencies.
 ```
 public/       the website, exactly as published (index.html, styles.css, main.js, assets/,
               _headers for security headers, robots.txt, sitemap.xml)
-sheets/       the old Google Apps Script sign-up sheet (replaced by worker/), plus its tests
-worker/       Cloudflare Worker: sign-ups → D1, new emails → Loops follow-ups (see worker/README.md)
+sheets/       Google Apps Script that receives the worker's copy of each sign-up into the sheet, plus its tests
+worker/       Cloudflare Worker: sign-ups → D1 (and a copy to the sheet), new emails → Loops follow-ups (see worker/README.md)
 docs/         screenshots of the page and form states
 DEPLOY.md     how it's hosted: Cloudflare Pages, DNS at Hostinger
 ```

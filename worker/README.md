@@ -1,9 +1,10 @@
 # Sign-ups → D1 → Loops follow-up emails
 
-A Cloudflare Worker (`fitbud-signups`) that replaces the Google Sheet as the place sign-ups are stored, so follow-up emails can go out automatically.
+A Cloudflare Worker (`fitbud-signups`) that stores sign-ups in D1 and sends new emails to Loops so follow-up emails go out automatically. Each sign-up is also copied to the Google Sheet, so the team can keep tracking Status and notes there.
 
 ```
 landing page form ──POST /signup──▶ worker ──▶ D1 table `signups` (one row per person)
+                                       └──▶ copy to the Google Sheet (Apps Script, `sheets/Code.gs`)
                                        └──▶ right away: Loops event `early_access_signup` ──▶ Loops sends the follow-up loop
 
 every 10 min (cron) ──▶ worker ──▶ retries any sign-up Loops didn't accept yet
@@ -46,7 +47,7 @@ Run these from `worker/`. Nothing here touches DNS or the Pages project.
 
    Only email rows whose **Status** is `New` (or empty) are queued for Loops. Anyone already Contacted, Interested, Onboarded or Not a fit is imported as `skipped`, so they get no automated email. Running it again is harmless. Delete the CSV and SQL afterwards: they hold contact details (both are git-ignored).
 
-7. **Form: done.** The page posts to `https://fitbud-signups.restless-unit-1f42.workers.dev/signup`, and `_headers` allows only that in `connect-src`. New sign-ups go to D1 only; the Google Sheet keeps the earlier ones. To check after a deploy, sign up once on the live page with your own email: the row appears in D1 straight away, and the contact in Loops within a few seconds. Delete the test contact from D1 and Loops.
+7. **Form: done.** The page posts to `https://fitbud-signups.restless-unit-1f42.workers.dev/signup`, and `_headers` allows only that in `connect-src`. New sign-ups go to D1 and are copied to the sheet. To check after a deploy, sign up once on the live page with your own email: the row appears in D1 straight away, and the contact in Loops within a few seconds. Delete the test contact from D1, the sheet and Loops.
 
 ## Day to day
 
@@ -69,6 +70,7 @@ npx wrangler tail
 | Name | What it does |
 |---|---|
 | `ALLOWED_ORIGINS` | Sites that may post the form. Other origins get a 403. |
+| `SHEET_ENDPOINT` | The Apps Script web app that also gets every sign-up. Empty to stop copying. D1 is the record; a sheet failure never loses a sign-up. |
 | `LOOPS_EVENT_NAME` | The event that starts the Loops follow-up loop. Default `early_access_signup`. |
 | `LOOPS_API_KEY` | Secret, set with `wrangler secret put`. |
 | cron `*/10 * * * *` | How often sign-ups Loops didn't accept are retried. |

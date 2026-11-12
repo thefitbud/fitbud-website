@@ -1,5 +1,5 @@
 // FitBud sign-ups worker.
-//   POST /signup   the landing page form → one row per person in D1
+//   POST /signup   the landing page form → one row per person in D1, plus a copy to the Google Sheet
 //                  → a new email is sent to Loops straight away (the event starts the follow-up loop)
 //   cron           retries anything still pending, e.g. if Loops was down at sign-up time
 // Validation matches sheets/Code.gs, which it replaces.
@@ -29,7 +29,11 @@ export default {
       return json({ ok: false, error: 'bad_request' }, 400, cors);
     }
 
-    const { queued, ...result } = await saveSignup(env.DB, params);
+    const { queued, spam, ...result } = await saveSignup(env.DB, params);
+    // The team still follows up from the sheet. A failure there must never lose the sign-up (it's in D1).
+    if (result.ok && !spam && env.SHEET_ENDPOINT) {
+      ctx.waitUntil(fetch(env.SHEET_ENDPOINT, { method: 'POST', body: params }).catch(() => {}));
+    }
     // Reply to the visitor now; Loops gets the event right after. If that fails, the cron retries.
     if (queued) ctx.waitUntil(pushOne(env, queued).catch(() => {}));
     return json(result, result.ok ? 200 : 400, cors);
@@ -42,7 +46,7 @@ export default {
 
 export async function saveSignup(db, p) {
   // Spam trap: bots fill every field. Pretend it worked and store nothing.
-  if (clean(p.get('website'))) return { ok: true };
+  if (clean(p.get('website'))) return { ok: true, spam: true };
 
   const name = clean(p.get('name')).slice(0, 80);
   const contact = clean(p.get('contact')).slice(0, 120);
