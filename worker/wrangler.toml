@@ -12,7 +12,7 @@ database_id = "34bd9bcd-842d-49e5-b2a5-0389977415fd"
 migrations_dir = "migrations"
 
 [triggers]
-# Every 10 minutes: push pending email sign-ups to Loops.
+# New sign-ups go to Loops straight away; every 10 minutes, retry any Loops did not accept.
 crons = ["*/10 * * * *"]
 
 [vars]

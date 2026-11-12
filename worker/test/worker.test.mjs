@@ -19,11 +19,13 @@ function setup({ loops = () => new Response('{"success":true}'), env: extra = {}
   };
   const env = { DB, ALLOWED_ORIGINS: `${ORIGIN},${BARE},https://fitbud-landing.pages.dev`, LOOPS_API_KEY: 'test-key',
     LOOPS_EVENT_NAME: 'early_access_signup', ...extra };
-  const ctx = { waitUntil() {} };
+  const waits = [];
+  const ctx = { waitUntil: (p) => waits.push(p) };
   const post = async (fields, origin = ORIGIN) => {
     const res = await worker.fetch(new Request('https://w.example/signup', {
       method: 'POST', headers: origin ? { Origin: origin } : {}, body: new URLSearchParams(fields),
     }), env, ctx);
+    await Promise.all(waits.splice(0)); // the background send to Loops
     return { status: res.status, body: await res.json(), headers: res.headers };
   };
   const rows = () => DB.raw.prepare('SELECT * FROM signups ORDER BY id').all();
@@ -33,7 +35,7 @@ test.afterEach(() => { globalThis.fetch = realFetch; });
 
 const asha = { name: 'Asha Rao', contact: 'Asha@Example.com', mode: 'Hybrid', clients: '10 to 20', page: 'https://www.thefitbud.com/' };
 
-test('a sign-up is saved once and queued for Loops', async () => {
+test('a new email sign-up is saved and sent to Loops straight away', async () => {
   const t = setup();
   const r = await t.post(asha);
   assert.equal(r.status, 200);
@@ -42,14 +44,14 @@ test('a sign-up is saved once and queued for Loops', async () => {
   const [row] = t.rows();
   assert.equal(row.contact_key, 'asha@example.com');
   assert.equal(row.contact_type, 'email');
-  assert.equal(row.loops_status, 'pending');
-  assert.equal(t.calls.length, 0, 'nothing leaves the worker until the cron runs');
+  assert.equal(row.loops_status, 'synced');
+  assert.ok(row.loops_synced_at);
+  assert.equal(t.loopsCalls().length, 1);
 });
 
 test('signing up twice keeps one row, refreshes answers and does not re-queue', async () => {
   const t = setup();
   await t.post(asha);
-  await pushToLoops(t.env);
   const r = await t.post({ ...asha, contact: ' asha@example.COM ', name: 'Asha R', mode: 'Online' });
   assert.deepEqual(r.body, { ok: true, duplicate: true });
   const rows = t.rows();
@@ -57,6 +59,7 @@ test('signing up twice keeps one row, refreshes answers and does not re-queue', 
   assert.equal(rows[0].name, 'Asha R');
   assert.equal(rows[0].mode, 'Online');
   assert.equal(rows[0].loops_status, 'synced');
+  assert.equal(t.loopsCalls().length, 1, 'the repeat sign-up is not sent again');
 });
 
 test('phone numbers match across formats and are never sent to Loops', async () => {
@@ -87,11 +90,9 @@ test('the spam trap stores nothing and other sites cannot post', async () => {
   assert.equal(t.calls.length, 0);
 });
 
-test('the cron sends one Loops event per new email with the right payload', async () => {
+test('the Loops event has the right payload and is sent once', async () => {
   const t = setup();
   await t.post(asha);
-  const summary = await pushToLoops(t.env);
-  assert.deepEqual(summary, { synced: 1, failed: 0, retry: 0 });
   const [call] = t.loopsCalls();
   assert.equal(call.url, 'https://app.loops.so/api/v1/events/send');
   assert.equal(call.init.headers.Authorization, 'Bearer test-key');
@@ -101,13 +102,15 @@ test('the cron sends one Loops event per new email with the right payload', asyn
     source: 'Early access form', eventProperties: { coachingMode: 'Hybrid', clientCount: '10 to 20' },
   });
   assert.equal(t.rows()[0].loops_status, 'synced');
-  await pushToLoops(t.env);
+  assert.deepEqual(await pushToLoops(t.env), { synced: 0, failed: 0, retry: 0 }, 'the cron finds nothing left');
   assert.equal(t.loopsCalls().length, 1, 'never sent twice');
 });
 
 test('Loops errors are retried, then marked failed', async () => {
   const t = setup({ loops: () => new Response('{"success":false,"message":"bad"}', { status: 400 }) });
   await t.post(asha);
+  assert.equal(t.rows()[0].loops_attempts, 1, 'the immediate send counts as the first attempt');
+  assert.equal((await t.post(asha)).body.duplicate, true, 'the visitor still sees success');
   for (let i = 0; i < MAX_ATTEMPTS + 2; i++) await pushToLoops(t.env);
   const [row] = t.rows();
   assert.equal(row.loops_status, 'failed');
@@ -116,11 +119,13 @@ test('Loops errors are retried, then marked failed', async () => {
   assert.equal(t.loopsCalls().length, MAX_ATTEMPTS);
 });
 
-test('a rate limit stops the run without using up attempts', async () => {
+test('a rate limit stops the cron run without using up attempts', async () => {
   const t = setup({ loops: (n) => (n === 2 ? new Response('', { status: 429 }) : new Response('{"success":true}')) });
+  t.env.LOOPS_API_KEY = ''; // queue three without sending
   await t.post(asha);
   await t.post({ ...asha, contact: 'b@example.com' });
   await t.post({ ...asha, contact: 'c@example.com' });
+  t.env.LOOPS_API_KEY = 'test-key';
   await pushToLoops(t.env);
   assert.deepEqual(t.rows().map((r) => [r.loops_status, r.loops_attempts]), [['synced', 1], ['pending', 0], ['pending', 0]]);
   await pushToLoops(t.env);
@@ -177,4 +182,28 @@ test('the bare domain may post too, and every listed origin is in wrangler.toml'
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
   const listed = toml.match(/ALLOWED_ORIGINS = "([^"]+)"/)[1].split(',');
   for (const o of ['https://www.thefitbud.com', 'https://thefitbud.com']) assert.ok(listed.includes(o), o);
+});
+
+test('if Loops is down at sign-up, the visitor still sees success and the cron sends it later', async () => {
+  let up = false;
+  const t = setup({ loops: () => (up ? new Response('{"success":true}') : new Response('down', { status: 503 })) });
+  const r = await t.post(asha);
+  assert.deepEqual(r.body, { ok: true });
+  assert.deepEqual([t.rows()[0].loops_status, t.rows()[0].loops_attempts], ['pending', 1]);
+  up = true;
+  assert.deepEqual(await pushToLoops(t.env), { synced: 1, failed: 0, retry: 0 });
+  assert.equal(t.rows()[0].loops_status, 'synced');
+});
+
+test('a network error during the immediate send does not break the reply', async () => {
+  const t = setup({ loops: () => { throw new Error('boom'); } });
+  const r = await t.post(asha);
+  assert.equal(r.status, 200);
+  assert.match(t.rows()[0].loops_error, /^network: boom/);
+});
+
+test('phone sign-ups are not sent straight away either', async () => {
+  const t = setup();
+  await t.post({ ...asha, contact: '+91 98765 43210' });
+  assert.equal(t.loopsCalls().length, 0);
 });

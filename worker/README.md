@@ -4,13 +4,15 @@ A Cloudflare Worker (`fitbud-signups`) that replaces the Google Sheet as the pla
 
 ```
 landing page form ──POST /signup──▶ worker ──▶ D1 table `signups` (one row per person)
+                                       └──▶ right away: Loops event `early_access_signup` ──▶ Loops sends the follow-up loop
 
-every 10 min (cron) ──▶ worker ──▶ Loops event `early_access_signup` ──▶ Loops sends the follow-up loop
+every 10 min (cron) ──▶ worker ──▶ retries any sign-up Loops didn't accept yet
 ```
 
 - **Same rules as the sheet.** Validation, the spam trap and "same person twice keeps one row" match `sheets/Code.gs`. A repeat sign-up refreshes name, mode and clients, and is **never sent to Loops twice**.
 - **Only emails go to Loops.** WhatsApp-number sign-ups are stored with `loops_status = 'skipped'`. The team follows those up by hand (a wa.me prefill they send, as today).
-- **Each email is sent to Loops once.** `loops_status` goes `pending` → `synced`. Errors are retried on later runs, up to 5 attempts, then the row is marked `failed` with the error in `loops_error`. If Loops rate-limits a run, the rest wait for the next run. Each event carries an `Idempotency-Key`, so a retry after a timeout can't send it twice.
+- **New emails go to Loops straight away.** The visitor gets their reply first; the worker sends the event a moment later. If Loops is down or slow, the visitor still sees success and the cron picks it up.
+- **Each email is sent to Loops once.** `loops_status` goes `pending` → `synced`. Errors are retried by the cron, up to 5 attempts, then the row is marked `failed` with the error in `loops_error`. If Loops rate-limits a run, the rest wait for the next run. Each event carries an `Idempotency-Key`, so a retry after a timeout can't send it twice.
 - **No key, no sends.** Without the `LOOPS_API_KEY` secret, sign-ups still save and wait as `pending`.
 
 What Loops receives per sign-up: `email`, `firstName`, `lastName` (name split at the first space), `source` (`Early access form` or `Early access (sheet)`), and event properties `coachingMode` and `clientCount`.
@@ -44,7 +46,7 @@ Run these from `worker/`. Nothing here touches DNS or the Pages project.
 
    Only email rows whose **Status** is `New` (or empty) are queued for Loops. Anyone already Contacted, Interested, Onboarded or Not a fit is imported as `skipped`, so they get no automated email. Running it again is harmless. Delete the CSV and SQL afterwards: they hold contact details (both are git-ignored).
 
-7. **Form: done.** The page posts to `https://fitbud-signups.restless-unit-1f42.workers.dev/signup`, and `_headers` allows only that in `connect-src`. New sign-ups go to D1 only; the Google Sheet keeps the earlier ones. To check after a deploy, sign up once on the live page with your own email: the row appears in D1 straight away, and the contact in Loops within about 10 minutes. Delete the test contact from D1 and Loops.
+7. **Form: done.** The page posts to `https://fitbud-signups.restless-unit-1f42.workers.dev/signup`, and `_headers` allows only that in `connect-src`. New sign-ups go to D1 only; the Google Sheet keeps the earlier ones. To check after a deploy, sign up once on the live page with your own email: the row appears in D1 straight away, and the contact in Loops within a few seconds. Delete the test contact from D1 and Loops.
 
 ## Day to day
 
@@ -69,7 +71,7 @@ npx wrangler tail
 | `ALLOWED_ORIGINS` | Sites that may post the form. Other origins get a 403. |
 | `LOOPS_EVENT_NAME` | The event that starts the Loops follow-up loop. Default `early_access_signup`. |
 | `LOOPS_API_KEY` | Secret, set with `wrangler secret put`. |
-| cron `*/10 * * * *` | How often pending emails go to Loops. |
+| cron `*/10 * * * *` | How often sign-ups Loops didn't accept are retried. |
 
 ## Tests
 

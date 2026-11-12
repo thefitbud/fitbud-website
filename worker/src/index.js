@@ -1,6 +1,7 @@
 // FitBud sign-ups worker.
 //   POST /signup   the landing page form → one row per person in D1
-//   cron           pending email sign-ups → Loops event, which starts the follow-up emails
+//                  → a new email is sent to Loops straight away (the event starts the follow-up loop)
+//   cron           retries anything still pending, e.g. if Loops was down at sign-up time
 // Validation matches sheets/Code.gs, which it replaces.
 
 export const MODES = ['Online', 'Hybrid', 'In person'];
@@ -11,7 +12,7 @@ export const MAX_ATTEMPTS = 5;
 const BATCH = 50; // per cron run; Loops allows about 10 requests a second
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const cors = corsHeaders(request, env);
 
@@ -28,7 +29,9 @@ export default {
       return json({ ok: false, error: 'bad_request' }, 400, cors);
     }
 
-    const result = await saveSignup(env.DB, params);
+    const { queued, ...result } = await saveSignup(env.DB, params);
+    // Reply to the visitor now; Loops gets the event right after. If that fails, the cron retries.
+    if (queued) ctx.waitUntil(pushOne(env, queued).catch(() => {}));
     return json(result, result.ok ? 200 : 400, cors);
   },
 
@@ -62,7 +65,7 @@ export async function saveSignup(db, p) {
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'form', ?9, ?9, ?10)
        ON CONFLICT (contact_key) DO UPDATE SET
          name = excluded.name, mode = excluded.mode, clients = excluded.clients, updated_at = excluded.updated_at
-       RETURNING created_at`
+       RETURNING id, created_at, loops_status`
     )
     .bind(
       contactKey(contact, type), name, contact, type, mode, clients,
@@ -71,43 +74,54 @@ export async function saveSignup(db, p) {
     )
     .first();
 
-  return row && row.created_at !== now ? { ok: true, duplicate: true } : { ok: true };
+  if (row && row.created_at !== now) return { ok: true, duplicate: true };
+  return row && row.loops_status === 'pending' ? { ok: true, queued: row.id } : { ok: true };
+}
+
+const PENDING_SQL = `SELECT id, name, contact, mode, clients, source, loops_attempts FROM signups
+  WHERE loops_status = 'pending' AND contact_type = 'email'`;
+
+// Send one new sign-up to Loops now. Safe alongside the cron: the Idempotency-Key stops a double send.
+export async function pushOne(env, id) {
+  if (!env.LOOPS_API_KEY) return null;
+  const row = await env.DB.prepare(`${PENDING_SQL} AND id = ?1`).bind(id).first();
+  return row ? syncRow(env, row) : null;
 }
 
 export async function pushToLoops(env) {
   const summary = { synced: 0, failed: 0, retry: 0 };
   if (!env.LOOPS_API_KEY) return summary;
 
-  const { results } = await env.DB
-    .prepare(
-      `SELECT id, name, contact, mode, clients, source, loops_attempts FROM signups
-       WHERE loops_status = 'pending' AND contact_type = 'email' ORDER BY id LIMIT ?1`
-    )
-    .bind(BATCH)
-    .all();
+  const { results } = await env.DB.prepare(`${PENDING_SQL} ORDER BY id LIMIT ?1`).bind(BATCH).all();
 
   for (const row of results) {
-    const res = await sendEvent(env, row);
-    if (res.rateLimited) break; // try the rest next run
-    const now = new Date().toISOString();
-    if (res.ok) {
-      summary.synced++;
-      await env.DB
-        .prepare(`UPDATE signups SET loops_status = 'synced', loops_synced_at = ?2, loops_error = NULL,
-                  loops_attempts = loops_attempts + 1 WHERE id = ?1`)
-        .bind(row.id, now)
-        .run();
-    } else {
-      const attempts = row.loops_attempts + 1;
-      const status = attempts >= MAX_ATTEMPTS ? 'failed' : 'pending';
-      summary[status === 'failed' ? 'failed' : 'retry']++;
-      await env.DB
-        .prepare(`UPDATE signups SET loops_status = ?2, loops_attempts = ?3, loops_error = ?4 WHERE id = ?1`)
-        .bind(row.id, status, attempts, res.error.slice(0, 300))
-        .run();
-    }
+    const outcome = await syncRow(env, row);
+    if (outcome === 'rate_limited') break; // try the rest next run
+    summary[outcome]++;
   }
   return summary;
+}
+
+// Returns 'synced', 'retry', 'failed' or 'rate_limited' (row left untouched).
+async function syncRow(env, row) {
+  const res = await sendEvent(env, row);
+  if (res.rateLimited) return 'rate_limited';
+  const now = new Date().toISOString();
+  if (res.ok) {
+    await env.DB
+      .prepare(`UPDATE signups SET loops_status = 'synced', loops_synced_at = ?2, loops_error = NULL,
+                loops_attempts = loops_attempts + 1 WHERE id = ?1`)
+      .bind(row.id, now)
+      .run();
+    return 'synced';
+  }
+  const attempts = row.loops_attempts + 1;
+  const status = attempts >= MAX_ATTEMPTS ? 'failed' : 'pending';
+  await env.DB
+    .prepare(`UPDATE signups SET loops_status = ?2, loops_attempts = ?3, loops_error = ?4 WHERE id = ?1`)
+    .bind(row.id, status, attempts, res.error.slice(0, 300))
+    .run();
+  return status === 'failed' ? 'failed' : 'retry';
 }
 
 async function sendEvent(env, row) {
