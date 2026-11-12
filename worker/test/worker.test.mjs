@@ -122,22 +122,27 @@ test('Loops errors are retried, then marked failed', async () => {
 test('a rate limit stops the cron run without using up attempts', async () => {
   const t = setup({ loops: (n) => (n === 2 ? new Response('', { status: 429 }) : new Response('{"success":true}')) });
   t.env.LOOPS_API_KEY = ''; // queue three without sending
+  const warn = console.warn; console.warn = () => {};
   await t.post(asha);
   await t.post({ ...asha, contact: 'b@example.com' });
   await t.post({ ...asha, contact: 'c@example.com' });
   t.env.LOOPS_API_KEY = 'test-key';
+  console.warn = warn;
   await pushToLoops(t.env);
   assert.deepEqual(t.rows().map((r) => [r.loops_status, r.loops_attempts]), [['synced', 1], ['pending', 0], ['pending', 0]]);
   await pushToLoops(t.env);
   assert.deepEqual(t.rows().map((r) => r.loops_status), ['synced', 'synced', 'synced']);
 });
 
-test('nothing is sent without an API key', async () => {
+test('nothing is sent without an API key, and the logs say why', async (tt) => {
+  const warn = tt.mock.method(console, 'warn', () => {});
   const t = setup({ env: { LOOPS_API_KEY: '' } });
   await t.post(asha);
   await pushToLoops(t.env);
   assert.equal(t.loopsCalls().length, 0);
   assert.equal(t.rows()[0].loops_status, 'pending');
+  assert.equal(warn.mock.callCount(), 2, 'once at sign-up, once in the cron');
+  assert.match(warn.mock.calls[0].arguments[0], /LOOPS_API_KEY is not set/);
 });
 
 test('sheet import: only "New" email rows are queued, existing people are kept', async () => {

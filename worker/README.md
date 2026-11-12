@@ -30,7 +30,7 @@ Run these from `worker/`. Nothing here touches DNS or the Pages project.
    - **Loops › New loop**, trigger **Event received**, event name `early_access_signup`. Write the follow-up emails in that loop. If the emails use the coaching mode or client count, add event properties `coachingMode` and `clientCount` (both text) under **Settings › Events** first.
    - Loops adds the unsubscribe link and footer. Copy must follow the product rules in `CLAUDE.md`: no invented stats or testimonials, and no promises the app doesn't keep.
 
-4. **Add the key to the worker:** the worker's **Settings › Variables and Secrets › Add › Secret**, name `LOOPS_API_KEY`. Cloudflare stores it encrypted; it's never in the repo.
+4. **Add the key to the worker:** the worker's **Settings › Variables and Secrets › Add › Secret**, name `LOOPS_API_KEY`. Cloudflare stores it encrypted; it's never in the repo. It must be type **Secret**, not Text: every deploy from `main` replaces Text variables with the ones in `wrangler.toml`. If the key is missing, sign-ups still save as `pending` and the logs say `LOOPS_API_KEY is not set`.
 
 5. **Check the worker.** Its overview page shows the URL, like `https://fitbud-signups.<account>.workers.dev`. Opening it shows `{"ok":true,…}`.
 

@@ -83,14 +83,14 @@ const PENDING_SQL = `SELECT id, name, contact, mode, clients, source, loops_atte
 
 // Send one new sign-up to Loops now. Safe alongside the cron: the Idempotency-Key stops a double send.
 export async function pushOne(env, id) {
-  if (!env.LOOPS_API_KEY) return null;
+  if (!env.LOOPS_API_KEY) return warnNoKey();
   const row = await env.DB.prepare(`${PENDING_SQL} AND id = ?1`).bind(id).first();
   return row ? syncRow(env, row) : null;
 }
 
 export async function pushToLoops(env) {
   const summary = { synced: 0, failed: 0, retry: 0 };
-  if (!env.LOOPS_API_KEY) return summary;
+  if (!env.LOOPS_API_KEY) { warnNoKey(); return summary; }
 
   const { results } = await env.DB.prepare(`${PENDING_SQL} ORDER BY id LIMIT ?1`).bind(BATCH).all();
 
@@ -153,6 +153,13 @@ async function sendEvent(env, row) {
   if (r.ok || r.status === 409) return { ok: true };
   const text = await r.text().catch(() => '');
   return { ok: false, error: `${r.status} ${text}` };
+}
+
+// Shows in the worker's Observability logs. Add the key under Settings › Variables and Secrets,
+// as type Secret: a plain Text variable is wiped by the next deploy from wrangler.toml.
+function warnNoKey() {
+  console.warn('LOOPS_API_KEY is not set: sign-ups are saved but not sent to Loops');
+  return null;
 }
 
 function corsHeaders(request, env) {
