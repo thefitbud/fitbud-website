@@ -327,6 +327,7 @@
           </div>
         </div>
 
+        <div class="signup-slot">
         <!-- data-endpoint: the sign-ups worker, which saves to D1 (see worker/README.md). -->
         <form class="signup" id="signup" data-endpoint="https://fitbud-signups.restless-unit-1f42.workers.dev/signup" novalidate>
           <h3>Join the early-access list</h3>
@@ -361,6 +362,19 @@
           <p class="signup__msg" id="signup-msg" role="status" aria-live="polite"></p>
           <p class="signup__small">We'll only use this to contact you about FitBud early access.</p>
         </form>
+
+        <!-- Shown in place of the form after a successful sign-up. main.js fills in the details. -->
+        <div class="signup signup-done" id="signup-done" hidden>
+          <svg class="signup-done__icon" aria-hidden="true" viewBox="0 0 56 56" width="56" height="56"><circle cx="28" cy="28" r="28" fill="currentColor" opacity=".12"/><circle cx="28" cy="28" r="20" fill="currentColor"/><path d="m19.5 28.5 6 6 11-12" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 id="signup-done-title" tabindex="-1">You're on the list.</h3>
+          <p class="signup-done__body" id="signup-done-body"></p>
+          <ul class="signup-done__next">
+            <li>We're opening FitBud to trainers a few at a time.</li>
+            <li>When it's your turn, we'll reach out to set you up.</li>
+          </ul>
+          <button class="btn btn--ghost btn--sm signup-done__again" type="button" id="signup-again">Use different details</button>
+        </div>
+        </div>
       </div>
     </section>
   </main>

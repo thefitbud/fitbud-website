@@ -298,6 +298,26 @@ a { color: var(--indigo); }
 .signup__msg.is-ok { background: var(--pos-bg); border: 1px solid #BFEBD8; color: var(--pos); padding: 12px 14px; border-radius: 10px; }
 .signup__small { margin: 0; font-size: 13px; color: var(--ink-500); }
 
+/* Sign-up confirmation: replaces the form in the same card */
+.signup-slot { display: grid; }
+.signup-done { align-content: center; justify-items: start; gap: 12px; }
+.signup[hidden] { display: none; }
+.signup-done__icon { color: var(--pos); margin-bottom: 4px; }
+.signup-done h3 { margin: 0; font-size: 28px; line-height: 1.2; letter-spacing: -0.01em; }
+.signup-done h3:focus { outline: none; }
+.signup-done h3:focus-visible { outline: 3px solid var(--indigo); outline-offset: 4px; }
+.signup-done__body { margin: 0; font-size: 17px; line-height: 1.55; color: var(--ink-700); }
+.signup-done__body b { color: var(--navy); font-weight: 600; overflow-wrap: anywhere; }
+.signup-done__body b.nowrap { white-space: nowrap; }
+.signup-done__next { list-style: none; margin: 8px 0 4px; padding: 16px 0 0; border-top: 1px solid var(--line); display: grid; gap: 10px; width: 100%; }
+.signup-done__next li { position: relative; padding-left: 22px; color: var(--ink-500); font-size: 15px; line-height: 1.5; }
+.signup-done__next li::before { content: ""; position: absolute; left: 4px; top: .6em; width: 7px; height: 7px; border-radius: 50%; background: var(--indigo); }
+.signup-done__again { margin-top: 4px; }
+.signup-done.is-entering { animation: done-in .45s cubic-bezier(.2,.8,.2,1) both; }
+.signup-done.is-entering .signup-done__icon { animation: done-pop .5s .1s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes done-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes done-pop { from { transform: scale(.4); opacity: 0; } }
+
 /* Sticky CTA (mobile) */
 .stickycta { display: none; }
 
@@ -313,6 +333,7 @@ a { color: var(--indigo); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .ping { animation: none; }
+  .signup-done.is-entering, .signup-done.is-entering .signup-done__icon { animation: none; }
   .js .reveal { opacity: 1; transform: none; transition: none; }
   .btn:hover { transform: none; }
 }

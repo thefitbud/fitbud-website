@@ -196,6 +196,43 @@
     form.addEventListener("input", clearOnEdit);
     form.addEventListener("change", clearOnEdit);
 
+    // Success: swap the form for a confirmation card of the same size, and move focus to it.
+    var done = document.getElementById("signup-done");
+    var doneTitle = document.getElementById("signup-done-title");
+    var doneBody = document.getElementById("signup-done-body");
+    var showDone = function (name, contact, kind, repeat) {
+      var first = name.split(/\s+/)[0];
+      doneTitle.textContent = (repeat ? "You're already on the list, " : "You're on the list, ") + first + ".";
+      doneBody.textContent = "";
+      var b = el("b", kind === "phone" ? "nowrap" : "", contact);
+      if (repeat) {
+        doneBody.append("We've updated your answers. We'll stay in touch at ", b, ".");
+      } else if (kind === "email") {
+        doneBody.append("A welcome email is on its way to ", b, ". If you don't see it in a few minutes, check Promotions or Spam.");
+      } else {
+        doneBody.append("We'll message you on WhatsApp at ", b, " as we open FitBud to more trainers.");
+      }
+      // Side by side on wide screens: keep the card the form's height so the row doesn't jump.
+      done.style.minHeight = window.matchMedia("(min-width: 901px)").matches ? form.offsetHeight + "px" : "";
+      form.hidden = true;
+      form.reset();
+      say("");
+      done.hidden = false;
+      if (!reduced) {
+        done.classList.remove("is-entering");
+        void done.offsetWidth; // restart the animation
+        done.classList.add("is-entering");
+      }
+      doneTitle.focus({ preventScroll: true });
+      var top = done.getBoundingClientRect().top;
+      if (top < 80 || top > window.innerHeight - 160) done.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    };
+    document.getElementById("signup-again").addEventListener("click", function () {
+      done.hidden = true;
+      form.hidden = false;
+      form.elements.name.focus();
+    });
+
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       say("");
@@ -224,8 +261,7 @@
         .then(function (r) { return r.json(); })
         .then(function (res) {
           if (!res || !res.ok) throw new Error((res && res.error) || "failed");
-          form.reset();
-          say("You're on the list. We'll be in touch as we open FitBud to more trainers.", "ok");
+          showDone(body.get("name"), contact, contactKind(contact), !!res.duplicate);
         })
         .catch(function () { say("That didn't go through. Please check your connection and try again.", "error"); })
         .then(function () { btn.disabled = false; btn.textContent = "Join the early-access list"; });

@@ -78,9 +78,18 @@ try {
       await page.locator('.chips label:has(input[name=clients][value="10 to 20"])').click();
       if (SHOTS) await form.screenshot({ path: `${SHOTS}/form-${label}-filled.png` });
       await form.locator('button[type=submit]').click();
-      await page.waitForFunction(() => document.getElementById('signup-msg').classList.contains('is-ok'));
-      assert.match(await msg.textContent(), /You're on the list/);
-      if (SHOTS) await form.screenshot({ path: `${SHOTS}/form-${label}-success.png` });
+      const done = page.locator('#signup-done');
+      await done.waitFor({ state: 'visible' });
+      assert.equal(await form.isVisible(), false, 'the form gives way to the confirmation');
+      assert.equal(await page.textContent('#signup-done-title'), "You're on the list, Asha.");
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'signup-done-title', 'focus moves to the confirmation');
+      const bodyText = await page.textContent('#signup-done-body');
+      assert.ok(bodyText.includes(contact), 'shows where we will reach them');
+      assert.match(bodyText, label === 'web' ? /welcome email/ : /WhatsApp/);
+      const box = await done.boundingBox();
+      const vw = page.viewportSize().width;
+      assert.ok(box.x >= 0 && box.x + box.width <= vw, 'fits the screen');
+      if (SHOTS) await done.screenshot({ path: `${SHOTS}/form-${label}-success.png` });
       const row = script.rows.at(-1);
       // Sheets hides the leading ' that keeps "+91…" as text.
       assert.deepEqual(row.slice(1, 7), ['Asha Rao', contact.startsWith('+') ? `'${contact}` : contact, label === 'web' ? 'Email' : 'WhatsApp', mode, '10 to 20', 'New']);
@@ -89,14 +98,19 @@ try {
     });
 
     await step(`${label}: signing up again does not add a second row`, async () => {
+      await page.click('#signup-again');
+      assert.equal(await form.isVisible(), true);
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'f-name');
       const n = script.rows.length;
       await page.fill('#f-name', 'Asha Rao');
       await page.fill('#f-contact', contact);
       await page.locator('.chips label:has(input[name=mode][value="Online"])').click();
       await page.locator('.chips label:has(input[name=clients][value="20+"])').click();
       await form.locator('button[type=submit]').click();
-      await page.waitForFunction(() => /on the list/.test(document.getElementById('signup-msg').textContent));
+      await page.waitForFunction(() => /already on the list/.test(document.getElementById('signup-done-title').textContent));
+      assert.match(await page.textContent('#signup-done-body'), /updated your answers/);
       assert.equal(script.rows.length, n);
+      await page.click('#signup-again');
       assert.deepEqual(script.rows.at(-1).slice(4, 6), ['Online', '20+']);
     });
 
