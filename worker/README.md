@@ -19,38 +19,18 @@ What Loops receives per sign-up: `email`, `firstName`, `lastName` (name split at
 
 Run these from `worker/`. Nothing here touches DNS or the Pages project.
 
-1. **Create the database.**
+1. **Database: done.** D1 database `fitbud-signups` (id in `wrangler.toml`). The `signups` table was created by pasting `migrations/0001_signups.sql` into its Console on Thu 12 Nov, so don't run `wrangler d1 migrations apply` for that file. Put any later table change in a new numbered file and run it the same way.
 
-   ```bash
-   npx wrangler d1 create fitbud-signups
-   ```
-
-   Paste the `database_id` it prints into `wrangler.toml` (replace `REPLACE_WITH_ID_FROM_wrangler_d1_create`) and commit that. The id isn't a secret.
-
-2. **Create the table.**
-
-   ```bash
-   npx wrangler d1 migrations apply fitbud-signups --remote
-   ```
+2. **Worker: created in the dashboard** (Workers & Pages › Import a repository › `thefitbud/fitbud-website`, root directory `worker`, deploy command `npx wrangler deploy`). Every push to `main` redeploys it.
 
 3. **Set up Loops** (app.loops.so):
    - **Settings › API**: create an API key.
    - **Loops › New loop**, trigger **Event received**, event name `early_access_signup`. Write the follow-up emails in that loop. If the emails use the coaching mode or client count, add event properties `coachingMode` and `clientCount` (both text) under **Settings › Events** first.
    - Loops adds the unsubscribe link and footer. Copy must follow the product rules in `CLAUDE.md`: no invented stats or testimonials, and no promises the app doesn't keep.
 
-4. **Add the key to the worker** (it's stored encrypted by Cloudflare, never in the repo):
+4. **Add the key to the worker:** the worker's **Settings › Variables and Secrets › Add › Secret**, name `LOOPS_API_KEY`. Cloudflare stores it encrypted; it's never in the repo.
 
-   ```bash
-   npx wrangler secret put LOOPS_API_KEY
-   ```
-
-5. **Deploy the worker.**
-
-   ```bash
-   npx wrangler deploy
-   ```
-
-   It prints the URL, like `https://fitbud-signups.<account>.workers.dev`. Opening it shows `{"ok":true,…}`.
+5. **Check the worker.** Its overview page shows the URL, like `https://fitbud-signups.<account>.workers.dev`. Opening it shows `{"ok":true,…}`.
 
 6. **Bring in the people already in the sheet.** Download the `Sign-ups` tab (**File › Download › CSV**), then from the repo root:
 

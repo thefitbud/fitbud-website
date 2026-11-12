@@ -8,7 +8,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "fitbud-signups"
-database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+database_id = "34bd9bcd-842d-49e5-b2a5-0389977415fd"
 migrations_dir = "migrations"
 
 [triggers]
