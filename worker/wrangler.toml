@@ -15,6 +15,22 @@ migrations_dir = "migrations"
 # New sign-ups go to Loops straight away; every 10 minutes, retry any Loops did not accept.
 crons = ["*/10 * * * *"]
 
+# Logs and traces in the dashboard (Observability tab). Settings match what Cloudflare suggested.
+# The worker never logs request bodies, so names and emails don't end up in the logs.
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
+
+[observability.issue_detection]
+enabled = true
+
 [vars]
 # Pages that may post the form (comma separated).
 ALLOWED_ORIGINS = "https://www.thefitbud.com,https://thefitbud.com,https://fitbud-landing.pages.dev,https://fitbud-website.restless-unit-1f42.workers.dev"
