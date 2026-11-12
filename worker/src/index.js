@@ -139,6 +139,7 @@ async function sendEvent(env, row) {
       body: JSON.stringify({
         email: row.contact.toLowerCase(),
         eventName: env.LOOPS_EVENT_NAME || 'early_access_signup',
+        name: row.name, // the whole name, as typed
         firstName,
         lastName: rest.join(' '),
         source: row.source === 'sheet' ? 'Early access (sheet)' : 'Early access form',

@@ -15,7 +15,7 @@ every 10 min (cron) ──▶ worker ──▶ retries any sign-up Loops didn't 
 - **Each email is sent to Loops once.** `loops_status` goes `pending` → `synced`. Errors are retried by the cron, up to 5 attempts, then the row is marked `failed` with the error in `loops_error`. If Loops rate-limits a run, the rest wait for the next run. Each event carries an `Idempotency-Key`, so a retry after a timeout can't send it twice.
 - **No key, no sends.** Without the `LOOPS_API_KEY` secret, sign-ups still save and wait as `pending`.
 
-What Loops receives per sign-up: `email`, `firstName`, `lastName` (name split at the first space), `source` (`Early access form` or `Early access (sheet)`), and event properties `coachingMode` and `clientCount`.
+What Loops receives per sign-up: `email`, `name` (the whole name as typed; create a **Text** contact property called `name` in Loops under Settings › Contact properties first), `firstName`, `lastName` (name split at the first space), `source` (`Early access form` or `Early access (sheet)`), and event properties `coachingMode` and `clientCount`.
 
 ## Set it up (Firoz: needs the Cloudflare login)
 
