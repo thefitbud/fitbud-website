@@ -6,6 +6,7 @@ import { toSql, parseSubmitted } from '../scripts/import-sheet.mjs';
 import { createD1 } from './d1.mjs';
 
 const ORIGIN = 'https://www.thefitbud.com';
+const BARE = 'https://thefitbud.com';
 const realFetch = globalThis.fetch;
 
 function setup({ loops = () => new Response('{"success":true}'), env: extra = {} } = {}) {
@@ -16,7 +17,7 @@ function setup({ loops = () => new Response('{"success":true}'), env: extra = {}
     if (String(url).includes('loops.so')) return loops(calls.filter((c) => c.url.includes('loops.so')).length, init);
     throw new Error(`unexpected fetch ${url}`);
   };
-  const env = { DB, ALLOWED_ORIGINS: `${ORIGIN},https://fitbud-landing.pages.dev`, LOOPS_API_KEY: 'test-key',
+  const env = { DB, ALLOWED_ORIGINS: `${ORIGIN},${BARE},https://fitbud-landing.pages.dev`, LOOPS_API_KEY: 'test-key',
     LOOPS_EVENT_NAME: 'early_access_signup', ...extra };
   const ctx = { waitUntil() {} };
   const post = async (fields, origin = ORIGIN) => {
@@ -165,4 +166,15 @@ test('sheet dates are read as India time', () => {
   assert.equal(parseSubmitted('Sat 31 Oct 2026, 1:47 pm'), '2026-10-31T08:17:00.000Z');
   assert.equal(parseSubmitted('Sun 1 Nov 2026, 12:05 am'), '2026-10-31T18:35:00.000Z');
   assert.equal(parseSubmitted('garbage'), null);
+});
+
+test('the bare domain may post too, and every listed origin is in wrangler.toml', async () => {
+  const t = setup();
+  const r = await t.post(asha, BARE);
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('Access-Control-Allow-Origin'), BARE);
+  const { readFileSync } = await import('node:fs');
+  const toml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+  const listed = toml.match(/ALLOWED_ORIGINS = "([^"]+)"/)[1].split(',');
+  for (const o of ['https://www.thefitbud.com', 'https://thefitbud.com']) assert.ok(listed.includes(o), o);
 });

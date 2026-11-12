@@ -17,7 +17,7 @@ crons = ["*/10 * * * *"]
 
 [vars]
 # Pages that may post the form (comma separated).
-ALLOWED_ORIGINS = "https://www.thefitbud.com,https://fitbud-landing.pages.dev,https://fitbud-website.restless-unit-1f42.workers.dev"
+ALLOWED_ORIGINS = "https://www.thefitbud.com,https://thefitbud.com,https://fitbud-landing.pages.dev,https://fitbud-website.restless-unit-1f42.workers.dev"
 # The event Loops listens for to start the follow-up loop.
 LOOPS_EVENT_NAME = "early_access_signup"
 
