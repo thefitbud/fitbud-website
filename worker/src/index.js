@@ -1,7 +1,7 @@
 // FitBud sign-ups worker.
-//   POST /signup   the landing page form → one row per person in D1 (and a copy to the Google Sheet)
+//   POST /signup   the landing page form → one row per person in D1
 //   cron           pending email sign-ups → Loops event, which starts the follow-up emails
-// Validation matches sheets/Code.gs so the sheet and D1 accept the same sign-ups.
+// Validation matches sheets/Code.gs, which it replaces.
 
 export const MODES = ['Online', 'Hybrid', 'In person'];
 export const CLIENTS = ['Under 5', '5 to 10', '10 to 20', '20+'];
@@ -11,7 +11,7 @@ export const MAX_ATTEMPTS = 5;
 const BATCH = 50; // per cron run; Loops allows about 10 requests a second
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const cors = corsHeaders(request, env);
 
@@ -29,11 +29,6 @@ export default {
     }
 
     const result = await saveSignup(env.DB, params);
-    if (result.ok && !result.spam && env.SHEET_ENDPOINT) {
-      // The team still follows up from the sheet. A failure here must not lose the sign-up.
-      ctx.waitUntil(fetch(env.SHEET_ENDPOINT, { method: 'POST', body: params }).catch(() => {}));
-    }
-    delete result.spam;
     return json(result, result.ok ? 200 : 400, cors);
   },
 
@@ -44,7 +39,7 @@ export default {
 
 export async function saveSignup(db, p) {
   // Spam trap: bots fill every field. Pretend it worked and store nothing.
-  if (clean(p.get('website'))) return { ok: true, spam: true };
+  if (clean(p.get('website'))) return { ok: true };
 
   const name = clean(p.get('name')).slice(0, 80);
   const contact = clean(p.get('contact')).slice(0, 120);

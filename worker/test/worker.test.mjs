@@ -1,4 +1,4 @@
-// npm test: the sign-ups worker against an in-memory D1 and a stubbed Loops / Google.
+// npm test: the sign-ups worker against an in-memory D1 and a stubbed Loops.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker, { pushToLoops, MAX_ATTEMPTS } from '../src/index.js';
@@ -14,17 +14,15 @@ function setup({ loops = () => new Response('{"success":true}'), env: extra = {}
   globalThis.fetch = async (url, init) => {
     calls.push({ url: String(url), init });
     if (String(url).includes('loops.so')) return loops(calls.filter((c) => c.url.includes('loops.so')).length, init);
-    return new Response('{"ok":true}');
+    throw new Error(`unexpected fetch ${url}`);
   };
   const env = { DB, ALLOWED_ORIGINS: `${ORIGIN},https://fitbud-landing.pages.dev`, LOOPS_API_KEY: 'test-key',
-    LOOPS_EVENT_NAME: 'early_access_signup', SHEET_ENDPOINT: 'https://script.google.com/macros/s/x/exec', ...extra };
-  const waits = [];
-  const ctx = { waitUntil: (p) => waits.push(p) };
+    LOOPS_EVENT_NAME: 'early_access_signup', ...extra };
+  const ctx = { waitUntil() {} };
   const post = async (fields, origin = ORIGIN) => {
     const res = await worker.fetch(new Request('https://w.example/signup', {
       method: 'POST', headers: origin ? { Origin: origin } : {}, body: new URLSearchParams(fields),
     }), env, ctx);
-    await Promise.all(waits);
     return { status: res.status, body: await res.json(), headers: res.headers };
   };
   const rows = () => DB.raw.prepare('SELECT * FROM signups ORDER BY id').all();
@@ -34,7 +32,7 @@ test.afterEach(() => { globalThis.fetch = realFetch; });
 
 const asha = { name: 'Asha Rao', contact: 'Asha@Example.com', mode: 'Hybrid', clients: '10 to 20', page: 'https://www.thefitbud.com/' };
 
-test('a sign-up is saved once, queued for Loops and copied to the sheet', async () => {
+test('a sign-up is saved once and queued for Loops', async () => {
   const t = setup();
   const r = await t.post(asha);
   assert.equal(r.status, 200);
@@ -44,7 +42,7 @@ test('a sign-up is saved once, queued for Loops and copied to the sheet', async 
   assert.equal(row.contact_key, 'asha@example.com');
   assert.equal(row.contact_type, 'email');
   assert.equal(row.loops_status, 'pending');
-  assert.equal(t.calls.filter((c) => c.url.includes('script.google.com')).length, 1);
+  assert.equal(t.calls.length, 0, 'nothing leaves the worker until the cron runs');
 });
 
 test('signing up twice keeps one row, refreshes answers and does not re-queue', async () => {

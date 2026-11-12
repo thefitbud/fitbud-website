@@ -1,10 +1,9 @@
 # Sign-ups → D1 → Loops follow-up emails
 
-A Cloudflare Worker (`fitbud-signups`) that takes over from the Google Sheet as the place sign-ups are stored, so follow-up emails can go out automatically.
+A Cloudflare Worker (`fitbud-signups`) that replaces the Google Sheet as the place sign-ups are stored, so follow-up emails can go out automatically.
 
 ```
 landing page form ──POST /signup──▶ worker ──▶ D1 table `signups` (one row per person)
-                                       └──▶ Google Sheet (copy, while the team still works from it)
 
 every 10 min (cron) ──▶ worker ──▶ Loops event `early_access_signup` ──▶ Loops sends the follow-up loop
 ```
@@ -67,11 +66,11 @@ Run these from `worker/`. Nothing here touches DNS or the Pages project.
 
 7. **Point the form at the worker.** Two edits in `public/`, in one commit:
    - `index.html`: set the form's `data-endpoint` to `https://fitbud-signups.<account>.workers.dev/signup`.
-   - `_headers`: add the worker URL to `connect-src`. The Google hosts can go once nothing posts to Apps Script from the browser.
+   - `_headers`: replace the two Google hosts in `connect-src` with the worker URL.
 
-   Then sign up once on the live page with your own email. The row should appear in D1 straight away, in the sheet a moment later, and the contact in Loops (with the event) within about 10 minutes. Delete the test contact from D1, the sheet and Loops.
+   Then sign up once on the live page with your own email. The row should appear in D1 straight away, and the contact in Loops (with the event) within about 10 minutes. Delete the test contact from D1 and Loops.
 
-Until step 7 is merged the page keeps posting straight to the sheet, so nothing breaks in between.
+Until step 7 is merged the page keeps posting to the sheet, so nothing breaks in between. After it, **new sign-ups go to D1 only** and the sheet stops growing. Keep it as the record of earlier sign-ups, or retire the Apps Script deployment once the import is checked.
 
 ## Day to day
 
@@ -89,18 +88,15 @@ npx wrangler d1 execute fitbud-signups --remote --command "UPDATE signups SET lo
 npx wrangler tail
 ```
 
-To stop copying sign-ups to the sheet, set `SHEET_ENDPOINT = ""` in `wrangler.toml` and redeploy.
-
 ## Settings (`wrangler.toml`)
 
 | Name | What it does |
 |---|---|
 | `ALLOWED_ORIGINS` | Sites that may post the form. Other origins get a 403. |
 | `LOOPS_EVENT_NAME` | The event that starts the Loops follow-up loop. Default `early_access_signup`. |
-| `SHEET_ENDPOINT` | Apps Script web app that also gets each sign-up. Empty to stop. |
 | `LOOPS_API_KEY` | Secret, set with `wrangler secret put`. |
 | cron `*/10 * * * *` | How often pending emails go to Loops. |
 
 ## Tests
 
-`npm test` at the repo root runs `worker/test/worker.test.mjs`: the worker against the real migration in Node's built-in SQLite, with Loops and Google stubbed. Nothing to install.
+`npm test` at the repo root runs `worker/test/worker.test.mjs`: the worker against the real migration in Node's built-in SQLite, with Loops stubbed. Nothing to install.
