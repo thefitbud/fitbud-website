@@ -125,7 +125,6 @@ async function syncRow(env, row) {
 }
 
 async function sendEvent(env, row) {
-  const [firstName, ...rest] = row.name.split(/\s+/);
   let r;
   try {
     r = await fetch(LOOPS_URL, {
@@ -140,8 +139,6 @@ async function sendEvent(env, row) {
         email: row.contact.toLowerCase(),
         eventName: env.LOOPS_EVENT_NAME || 'early_access_signup',
         name: row.name, // the whole name, as typed
-        firstName,
-        lastName: rest.join(' '),
         source: row.source === 'sheet' ? 'Early access (sheet)' : 'Early access form',
         eventProperties: { coachingMode: row.mode || '', clientCount: row.clients || '' },
       }),

@@ -98,7 +98,7 @@ test('the Loops event has the right payload and is sent once', async () => {
   assert.equal(call.init.headers.Authorization, 'Bearer test-key');
   assert.match(call.init.headers['Idempotency-Key'], /^fitbud-signup-\d+$/);
   assert.deepEqual(JSON.parse(call.init.body), {
-    email: 'asha@example.com', eventName: 'early_access_signup', name: 'Asha Rao', firstName: 'Asha', lastName: 'Rao',
+    email: 'asha@example.com', eventName: 'early_access_signup', name: 'Asha Rao',
     source: 'Early access form', eventProperties: { coachingMode: 'Hybrid', clientCount: '10 to 20' },
   });
   assert.equal(t.rows()[0].loops_status, 'synced');
