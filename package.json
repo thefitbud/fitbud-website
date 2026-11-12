@@ -4,11 +4,11 @@
   "description": "Marketing site for www.thefitbud.com (static, no build step)",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5"
   },
   "scripts": {
     "start": "python3 -m http.server 4321 --directory public",
-    "test": "node --test test/page.test.mjs sheets/test/code.test.mjs",
+    "test": "node --test --no-warnings=ExperimentalWarning test/page.test.mjs sheets/test/code.test.mjs worker/test/worker.test.mjs",
     "test:e2e": "node sheets/test/e2e.mjs"
   }
 }

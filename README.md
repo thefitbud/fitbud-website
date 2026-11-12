@@ -8,6 +8,7 @@ No framework, no build step, no dependencies.
 public/       the website, exactly as published (index.html, styles.css, main.js, assets/,
               _headers for security headers, robots.txt, sitemap.xml)
 sheets/       Google Apps Script that saves sign-ups to the sheet, plus its tests
+worker/       Cloudflare Worker: sign-ups → D1, new emails → Loops follow-ups (see worker/README.md)
 docs/         screenshots of the page and form states
 DEPLOY.md     how it's hosted: Cloudflare Pages, DNS at Hostinger
 ```
@@ -23,7 +24,7 @@ Submitting the form locally sends a real sign-up to the sheet, so delete test ro
 ## Tests
 
 ```bash
-npm test           # sign-up script logic (Node 20+, nothing to install)
+npm test           # sign-up script and worker logic (Node 22+, nothing to install)
 npm run test:e2e   # the real page in Chromium posting to a local stand-in for Google
 ```
 
