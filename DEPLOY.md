@@ -8,7 +8,7 @@ Why this way:
 - **Every push to `main` redeploys it.** No uploads by hand, and pull requests get their own preview links.
 - **It's free** and on the Cloudflare account FitBud already uses.
 
-Only the `public/` folder is published. `_headers` there sets the security headers, including a content policy that only lets the form talk to Google Apps Script.
+Only the `public/` folder is published. `_headers` there sets the security headers, including a content policy that only lets the form talk to the sign-ups worker (`worker/README.md`).
 
 > These steps are for whoever holds the Cloudflare and Hostinger logins (Firoz). Hostinger's menu names change now and then. If a label differs, look for the closest match.
 
@@ -68,7 +68,7 @@ Then check that both `http://thefitbud.com` and `https://thefitbud.com` land on 
 
 - [ ] `https://www.thefitbud.com` loads, with a padlock, on a laptop and a phone.
 - [ ] `thefitbud.com` redirects to `www`.
-- [ ] Sign up once with your own details. You should see "You're on the list", and the sheet row's **Page** column should read `https://www.thefitbud.com/`. Delete the row.
+- [ ] Sign up once with your own details. You should see "You're on the list", and a row in the D1 `signups` table whose `page` reads `https://www.thefitbud.com/`. Delete it.
 - [ ] Paste `https://www.thefitbud.com` into a WhatsApp chat. The preview card ("More clients shouldn't mean more chaos.") should appear. WhatsApp caches previews, so a first try may lag.
 - [ ] Send a test email to `tech@thefitbud.com` and confirm it arrives.
 
@@ -80,4 +80,4 @@ Then check that both `http://thefitbud.com` and `https://thefitbud.com` land on 
 ## Changing the page later
 
 Edit files in `public/` and merge to `main`. Pages redeploys in about a minute.
-The sign-up endpoint is the form's `data-endpoint` in `public/index.html`. The sheet script and its tests are in `sheets/`.
+The sign-up endpoint is the form's `data-endpoint` in `public/index.html`. The worker that receives it is in `worker/`.

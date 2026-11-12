@@ -12,6 +12,6 @@ Static marketing site for www.thefitbud.com. Everything published lives in `publ
 
 ## Working rules
 - Run `npm test` (and `npm run test:e2e` when the page or form changes) before pushing. Check the page at 1440×900 and 393×852.
-- Keep `_headers` in step with what the page loads: the content policy only allows Google Apps Script for the form.
+- Keep `_headers` in step with what the page loads: the content policy only allows the sign-ups worker (`worker/`) for the form.
 - Never run deploy commands (`wrangler pages deploy`, Cloudflare or Hostinger changes). Firoz deploys.
-- No secrets in the repo. The Apps Script URL in `index.html` is public by design.
+- No secrets in the repo. The worker URL in `index.html` is public by design; the Loops key is a Cloudflare secret.

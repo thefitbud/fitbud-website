@@ -35,7 +35,7 @@ try {
     const form = page.locator('#signup');
     const msg = page.locator('#signup-msg');
 
-    assert.match(await form.getAttribute('data-endpoint'), /^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/, 'page points at the Apps Script web app');
+    assert.match(await form.getAttribute('data-endpoint'), /^https:\/\/fitbud-signups\.[a-z0-9-]+\.workers\.dev\/signup$/, 'page points at the sign-ups worker');
     await page.evaluate(() => document.getElementById('signup').setAttribute('data-endpoint', ''));
     await step(`${label}: no endpoint configured says so and stores nothing`, async () => {
       await page.fill('#f-name', 'Asha Rao');

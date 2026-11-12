@@ -31,3 +31,11 @@ test('the WhatsApp message is prefilled for the visitor to send', () => {
     assert.match(tag, /rel="noopener"/);
   }
 });
+
+test('the form posts to the sign-ups worker, and the content policy allows only that', () => {
+  const endpoint = html.match(/data-endpoint="([^"]+)"/)[1];
+  assert.match(endpoint, /^https:\/\/fitbud-signups\.[a-z0-9-]+\.workers\.dev\/signup$/);
+  const headers = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8');
+  const connect = headers.match(/connect-src ([^;]+);/)[1].split(/\s+/);
+  assert.deepEqual(connect, ["'self'", new URL(endpoint).origin]);
+});

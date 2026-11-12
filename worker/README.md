@@ -44,13 +44,7 @@ Run these from `worker/`. Nothing here touches DNS or the Pages project.
 
    Only email rows whose **Status** is `New` (or empty) are queued for Loops. Anyone already Contacted, Interested, Onboarded or Not a fit is imported as `skipped`, so they get no automated email. Running it again is harmless. Delete the CSV and SQL afterwards: they hold contact details (both are git-ignored).
 
-7. **Point the form at the worker.** Two edits in `public/`, in one commit:
-   - `index.html`: set the form's `data-endpoint` to `https://fitbud-signups.<account>.workers.dev/signup`.
-   - `_headers`: replace the two Google hosts in `connect-src` with the worker URL.
-
-   Then sign up once on the live page with your own email. The row should appear in D1 straight away, and the contact in Loops (with the event) within about 10 minutes. Delete the test contact from D1 and Loops.
-
-Until step 7 is merged the page keeps posting to the sheet, so nothing breaks in between. After it, **new sign-ups go to D1 only** and the sheet stops growing. Keep it as the record of earlier sign-ups, or retire the Apps Script deployment once the import is checked.
+7. **Form: done.** The page posts to `https://fitbud-signups.restless-unit-1f42.workers.dev/signup`, and `_headers` allows only that in `connect-src`. New sign-ups go to D1 only; the Google Sheet keeps the earlier ones. To check after a deploy, sign up once on the live page with your own email: the row appears in D1 straight away, and the contact in Loops within about 10 minutes. Delete the test contact from D1 and Loops.
 
 ## Day to day
 

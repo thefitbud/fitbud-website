@@ -145,8 +145,8 @@
     new IntersectionObserver(function (es) { signupVisible = es[0].isIntersecting; sync(); }).observe(signupSection);
   }
 
-  // Early-access form. Posts to the Google Apps Script web app in data-endpoint,
-  // which appends a row to the sign-up sheet (see sheets/README.md).
+  // Early-access form. Posts to the sign-ups worker in data-endpoint, which saves
+  // one row per person to D1 and passes new emails to Loops (see worker/README.md).
   var form = document.getElementById("signup");
   if (form) {
     var msg = document.getElementById("signup-msg");
@@ -219,7 +219,7 @@
 
       btn.disabled = true;
       btn.textContent = "Sending…";
-      // URL-encoded body keeps this a "simple" request, which Apps Script accepts without CORS preflight.
+      // URL-encoded body keeps this a "simple" request, so the browser sends it without a CORS preflight.
       fetch(endpoint, { method: "POST", body: body })
         .then(function (r) { return r.json(); })
         .then(function (res) {
